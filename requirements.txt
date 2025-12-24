@@ -3,3 +3,5 @@ pymupdf
 pdfminer.six
 numpy
 scikit-learn
+pdfplumber
+
