@@ -112,7 +112,5 @@ if uploaded_file is not None:
             st.write(features)
 
     except Exception as e:
-        st.error(
-            "⚠️ An unexpected error occurred while processing this CV.\n\n"
-            "Please try another PDF or refresh the page."
-        )
+       st.error("⚠️ Internal error occurred")
+       st.exception(e)
