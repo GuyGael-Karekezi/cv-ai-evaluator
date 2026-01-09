@@ -4,4 +4,4 @@ pdfminer.six
 numpy
 scikit-learn
 pdfplumber
-
+pdfminer.six
