@@ -17,9 +17,12 @@ from feedback.feedback import generate_feedback
 
 
 # -------------------------------
-# UI
+# PAGE CONFIG
 # -------------------------------
-st.set_page_config(page_title="AI-Powered CV Evaluation System", layout="centered")
+st.set_page_config(
+    page_title="AI-Powered CV Evaluation System",
+    layout="centered"
+)
 
 st.title("AI-Powered CV Evaluation System")
 st.write(
@@ -39,33 +42,43 @@ manual_field = st.selectbox(
 # -------------------------------
 if uploaded_file is not None:
     try:
-        # Save uploaded PDF temporarily
+        # Save uploaded file
         with open("temp.pdf", "wb") as f:
             f.write(uploaded_file.read())
 
-        # --- Text processing ---
+        # --- PDF text extraction ---
         raw_text = extract_text_from_pdf("temp.pdf")
 
-        if not raw_text or len(raw_text.strip()) < 50:
-           st.error(
-                     "Unable to extract enough text from this PDF. "
-                     "Please ensure the CV contains selectable text."
-    )
-           st.stop()
+        # --- SAFER VALIDATION (CLOUD-FRIENDLY) ---
+        compact_text = raw_text.replace("\n", "").replace(" ", "")
 
+        if not raw_text or len(compact_text) < 20:
+            st.error(
+                "Unable to extract readable text from this PDF.\n\n"
+                "The file may use a complex layout. "
+                "Please try exporting the CV directly from Word or LaTeX."
+            )
+            st.stop()
+
+        # --- DEBUG (temporary, keep for now) ---
+        with st.expander("PDF extraction debug"):
+            st.write("Extracted characters:", len(raw_text))
+            st.write(raw_text[:500])
+
+        # --- Cleaning & section detection ---
         cleaned_text = clean_text(raw_text)
         sections = extract_sections(cleaned_text)
 
-        # --- Initial feature extraction (neutral baseline) ---
+        # --- Baseline extraction ---
         base_features = extract_features(sections, field="AI")
 
-        # --- Auto-detect field ---
+        # --- Field detection ---
         detected_field, field_scores = detect_field(base_features)
 
-        # --- Decide final field ---
+        # --- Final field decision ---
         final_field = detected_field if manual_field == "Auto" else manual_field
 
-        # --- Re-extract features using final field ontology ---
+        # --- Re-extract with correct ontology ---
         features = extract_features(sections, field=final_field)
 
         # --- Scoring & feedback ---
@@ -98,12 +111,8 @@ if uploaded_file is not None:
         with st.expander("Extracted features (debug)"):
             st.write(features)
 
-    except Exception:
-        # -------------------------------
-        # GRACEFUL FAILURE (NO CRASH)
-        # -------------------------------
+    except Exception as e:
         st.error(
-            "⚠️ Unable to process this PDF.\n\n"
-            "Please upload a **text-based CV** (not a scanned image).\n"
-            "If the issue persists, try exporting your CV directly from Word or LaTeX."
+            "⚠️ An unexpected error occurred while processing this CV.\n\n"
+            "Please try another PDF or refresh the page."
         )
