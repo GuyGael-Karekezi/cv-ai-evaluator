@@ -45,6 +45,14 @@ if uploaded_file is not None:
 
         # --- Text processing ---
         raw_text = extract_text_from_pdf("temp.pdf")
+
+        if not raw_text or len(raw_text.strip()) < 50:
+           st.error(
+                     "Unable to extract enough text from this PDF. "
+                     "Please ensure the CV contains selectable text."
+    )
+          st.stop()
+
         cleaned_text = clean_text(raw_text)
         sections = extract_sections(cleaned_text)
 
