@@ -60,11 +60,7 @@ if uploaded_file is not None:
             )
             st.stop()
 
-        # --- DEBUG (temporary, keep for now) ---
-        with st.expander("PDF extraction debug"):
-            st.write("Extracted characters:", len(raw_text))
-            st.write(raw_text[:500])
-
+       
         # --- Cleaning & section detection ---
         cleaned_text = clean_text(raw_text)
         sections = extract_sections(cleaned_text)
