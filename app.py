@@ -19,7 +19,13 @@ from feedback.feedback import generate_feedback
 # -------------------------------
 # UI
 # -------------------------------
+st.set_page_config(page_title="AI-Powered CV Evaluation System", layout="centered")
+
 st.title("AI-Powered CV Evaluation System")
+st.write(
+    "Upload your CV in PDF format to receive an explainable AI-based evaluation, "
+    "including field detection, scoring, and personalized feedback."
+)
 
 uploaded_file = st.file_uploader("Upload your CV (PDF)", type=["pdf"])
 
@@ -32,57 +38,64 @@ manual_field = st.selectbox(
 # PIPELINE
 # -------------------------------
 if uploaded_file is not None:
+    try:
+        # Save uploaded PDF temporarily
+        with open("temp.pdf", "wb") as f:
+            f.write(uploaded_file.read())
 
-    # Save uploaded PDF temporarily
-    with open("temp.pdf", "wb") as f:
-        f.write(uploaded_file.read())
+        # --- Text processing ---
+        raw_text = extract_text_from_pdf("temp.pdf")
+        cleaned_text = clean_text(raw_text)
+        sections = extract_sections(cleaned_text)
 
-    # --- Text processing ---
-    raw_text = extract_text_from_pdf("temp.pdf")
-    cleaned_text = clean_text(raw_text)
-    sections = extract_sections(cleaned_text)
+        # --- Initial feature extraction (neutral baseline) ---
+        base_features = extract_features(sections, field="AI")
 
-    # --- Initial feature extraction (neutral baseline) ---
-    base_features = extract_features(sections, field="AI")
+        # --- Auto-detect field ---
+        detected_field, field_scores = detect_field(base_features)
 
-    # --- Auto-detect field ---
-    detected_field, field_scores = detect_field(base_features)
+        # --- Decide final field ---
+        final_field = detected_field if manual_field == "Auto" else manual_field
 
-    # --- Decide final field ---
-    if manual_field == "Auto":
-        final_field = detected_field
-    else:
-        final_field = manual_field
+        # --- Re-extract features using final field ontology ---
+        features = extract_features(sections, field=final_field)
 
-    # --- Re-extract features using final field ontology ---
-    features = extract_features(sections, field=final_field)
+        # --- Scoring & feedback ---
+        score = compute_score(features)
+        feedback = generate_feedback(features, field=final_field)
 
-    # --- Scoring & feedback ---
-    score = compute_score(features)
-    feedback = generate_feedback(features, field=final_field)
+        # -------------------------------
+        # OUTPUT
+        # -------------------------------
+        st.subheader("Detected Field")
+        st.write(f"**{final_field}**")
 
-    # -------------------------------
-    # OUTPUT
-    # -------------------------------
-    st.subheader("Detected Field")
-    st.write(f"**{final_field}**")
+        with st.expander("Field confidence details"):
+            st.write(field_scores)
 
-    with st.expander("Field confidence details"):
-        st.write(field_scores)
+        st.subheader(f"Overall Score: {score}/100")
 
-    st.subheader(f"Overall Score: {score}/100")
+        st.subheader("Strengths")
+        for s in feedback.get("strengths", []):
+            st.write("✔️", s)
 
-    st.subheader("Strengths")
-    for s in feedback["strengths"]:
-        st.write("✔️", s)
+        st.subheader("Weaknesses")
+        for w in feedback.get("weaknesses", []):
+            st.write("⚠️", w)
 
-    st.subheader("Weaknesses")
-    for w in feedback["weaknesses"]:
-        st.write("⚠️", w)
+        st.subheader("Suggestions")
+        for sug in feedback.get("suggestions", []):
+            st.write("➡️", sug)
 
-    st.subheader("Suggestions")
-    for sug in feedback["suggestions"]:
-        st.write("➡️", sug)
+        with st.expander("Extracted features (debug)"):
+            st.write(features)
 
-    with st.expander("Extracted features (debug)"):
-        st.write(features)
+    except Exception:
+        # -------------------------------
+        # GRACEFUL FAILURE (NO CRASH)
+        # -------------------------------
+        st.error(
+            "⚠️ Unable to process this PDF.\n\n"
+            "Please upload a **text-based CV** (not a scanned image).\n"
+            "If the issue persists, try exporting your CV directly from Word or LaTeX."
+        )
