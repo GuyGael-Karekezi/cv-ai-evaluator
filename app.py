@@ -51,7 +51,7 @@ if uploaded_file is not None:
                      "Unable to extract enough text from this PDF. "
                      "Please ensure the CV contains selectable text."
     )
-          st.stop()
+           st.stop()
 
         cleaned_text = clean_text(raw_text)
         sections = extract_sections(cleaned_text)
